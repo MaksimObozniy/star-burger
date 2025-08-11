@@ -1,9 +1,8 @@
 from django.http import JsonResponse
 from django.templatetags.static import static
 
-
+import json
 from .models import Product
-
 
 def banners_list_api(request):
     # FIXME move data to db?
@@ -58,5 +57,11 @@ def product_list_api(request):
 
 
 def register_order(request):
-    # TODO это лишь заглушка
-    return JsonResponse({})
+    if request.method == 'POST':
+        order_data = json.loads(request.body)
+
+        print(order_data)
+
+        return JsonResponse({'status': 'success'})
+
+    return JsonResponse({'status': 'Только POST запросы'}, status=405)
