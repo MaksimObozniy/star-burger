@@ -1,9 +1,9 @@
 from django.http import JsonResponse
 from django.templatetags.static import static
+from django.shortcuts import get_object_or_404
 
-
-from .models import Product
-
+from .models import Product, Order, OrderItem
+import json
 
 def banners_list_api(request):
     # FIXME move data to db?
@@ -58,5 +58,21 @@ def product_list_api(request):
 
 
 def register_order(request):
-    # TODO это лишь заглушка
-    return JsonResponse({})
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Only Post method allowed'}, status=405)
+
+    data = json.loads(request.body)
+    order = Order.objects.create(
+        firstname=data['firstname'],
+        lastname=data['lastname'],
+        phonenumber=data['phonenumber'],
+        address=data['address'],
+    )
+    for item in data['products']:
+        product = get_object_or_404(Product, id=item['product'])
+        OrderItem.objects.create(
+            order=order, product=product,
+            quantity=int(item['quantity']),
+            price=product.price,
+        )
+    return JsonResponse({'status': 'ok', 'order_id': order.id})
