@@ -1,9 +1,10 @@
 from django.http import JsonResponse
 from django.templatetags.static import static
 from django.shortcuts import get_object_or_404
-
 from .models import Product, Order, OrderItem
-import json
+
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
 
 def banners_list_api(request):
     # FIXME move data to db?
@@ -56,23 +57,21 @@ def product_list_api(request):
         'indent': 4,
     })
 
-
+@api_view(['POST'])
 def register_order(request):
-    if request.method != 'POST':
-        return JsonResponse({'error': 'Only Post method allowed'}, status=405)
 
-    data = json.loads(request.body)
+    request_data = request.data
     order = Order.objects.create(
-        firstname=data['firstname'],
-        lastname=data['lastname'],
-        phonenumber=data['phonenumber'],
-        address=data['address'],
+        firstname=request_data['firstname'],
+        lastname=request_data['lastname'],
+        phonenumber=request_data['phonenumber'],
+        address=request_data['address'],
     )
-    for item in data['products']:
+    for item in request_data['products']:
         product = get_object_or_404(Product, id=item['product'])
         OrderItem.objects.create(
             order=order, product=product,
             quantity=int(item['quantity']),
             price=product.price,
         )
-    return JsonResponse({'status': 'ok', 'order_id': order.id})
+    return Response({'status': 'ok', 'order_id': order.id})
