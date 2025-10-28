@@ -30,6 +30,8 @@ class OrderItemInputSerializer(serializers.Serializer):
         list_serializer_class = OrderItemsListSerializer
 
 class OrderCreateSerializer(serializers.Serializer):
+    id = serializers.IntegerField(read_only=True)
+
     firstname = serializers.CharField(
         allow_blank=False, allow_null=False,
         error_messages={
@@ -63,7 +65,7 @@ class OrderCreateSerializer(serializers.Serializer):
         },
     )
 
-    products = OrderItemInputSerializer(many=True, allow_empty=False)
+    products = OrderItemInputSerializer(many=True, allow_empty=False, write_only=True)
 
 
     def validate_phonenumber(self, value: str):
