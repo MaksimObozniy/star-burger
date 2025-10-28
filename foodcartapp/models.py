@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import F, Sum, DecimalField, ExpressionWrapper
 from django.core.validators import MinValueValidator
 from phonenumber_field.modelfields import PhoneNumberField
 
@@ -121,7 +122,16 @@ class RestaurantMenuItem(models.Model):
 
     def __str__(self):
         return f"{self.restaurant.name} - {self.product.name}"
-    
+
+
+class OrderQuertSet(models.QuerySet):
+    def with_total_price(self):
+        line_total = ExpressionWrapper(
+            F('items__price') * F('items__quantity'),
+            output_field=DecimalField(max_digits=10, decimal_places=2),
+        )
+        return self.annotate(total_price=Sum(line_total))
+
 
 class Order(models.Model):
     firstname = models.CharField('Имя', max_length=50)
@@ -130,6 +140,7 @@ class Order(models.Model):
     address = models.CharField('Адрес', max_length=200)
     created_at = models.DateTimeField('Создан', auto_now_add=True)
 
+    objects = OrderQuertSet.as_manager()
     class Meta:
         verbose_name = 'Заказ'
         verbose_name_plural = 'Заказы'
@@ -165,3 +176,4 @@ class OrderItem(models.Model):
     class Meta:
         verbose_name = 'позиция заказа'
         verbose_name_plural = 'позиции заказа'
+
