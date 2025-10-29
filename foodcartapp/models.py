@@ -170,7 +170,9 @@ class OrderItem(models.Model):
     price = models.DecimalField(
         'цена',
         max_digits=8,
-        decimal_places=2
+        decimal_places=2,
+        validators=[MinValueValidator(0)],
+        null=True
         )
     
     class Meta:

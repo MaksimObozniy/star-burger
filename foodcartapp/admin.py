@@ -116,3 +116,13 @@ class OrderAdmin(admin.ModelAdmin):
     list_filter   = ('created_at',)
     readonly_fields = ('created_at',)
     inlines = [OrderItemInline]
+
+    def save_formset(self, request, form, formset, change):
+        instances = formset.save(commit=False)
+        for obj in instances:
+            if isinstance(obj, OrderItem) and obj.price is None:
+                obj.price = obj.product.price
+            obj.save()
+        formset.save_m2m()
+        for obj in formset.deleted_objects:
+            obj.delete()
