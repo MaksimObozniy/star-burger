@@ -2,7 +2,7 @@ from rest_framework import serializers
 import phonenumbers
 
 from .models import Order, Product, OrderItem
-
+from django.db import transaction
 
 class OrderItemsListSerializer(serializers.ListSerializer):
     def to_internal_value(self, data):
@@ -78,15 +78,18 @@ class OrderCreateSerializer(serializers.Serializer):
         return value
 
     def create(self, validated_data):
-        items = validated_data.pop('products')
-        order = Order.objects.create(**validated_data)
 
-        for item in items:
-            product = item['product']
-            OrderItem.objects.create(
-                order=order,
-                product=product,
-                quantity=item['quantity'],
-                price=product.price,
-            )
-        return order
+        items = validated_data.pop('products')
+
+        with transaction.atomoc():
+            order = Order.objects.create(**validated_data)
+
+            for item in items:
+                product = item['product']
+                OrderItem.objects.create(
+                    order=order,
+                    product=product,
+                    quantity=item['quantity'],
+                    price=product.price,
+                )
+            return order
