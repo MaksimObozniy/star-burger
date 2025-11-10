@@ -2,6 +2,8 @@ from django.contrib import admin
 from django.shortcuts import reverse
 from django.templatetags.static import static
 from django.utils.html import format_html
+from django.shortcuts import redirect
+from django.utils.http import url_has_allowed_host_and_scheme
 
 from .models import Product, ProductCategory, ProductCategory, Restaurant, RestaurantMenuItem, Order, OrderItem
 
@@ -126,3 +128,23 @@ class OrderAdmin(admin.ModelAdmin):
         formset.save_m2m()
         for obj in formset.deleted_objects:
             obj.delete()
+
+
+    def redirect_back(self, request):
+        next_url = request.GET.get('next') or request.POST.get('next')
+        if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
+            return redirect(next_url)
+        return None
+
+
+    def response_change(self, request, obj):
+        resp = super().response_change(request, obj)
+        back = self.redirect_back(request)
+        
+        return back or resp
+
+
+    def response_add(self, request, obj, post_url_continue=None):
+        resp = super().response_add(request, obj, post_url_continue)
+        back = self.redirect_back(request)
+        return back or resp
