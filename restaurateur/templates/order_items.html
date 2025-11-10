@@ -18,6 +18,7 @@
       <th>Стоимость заказа</th>
       <th>Клиент</th>
       <th>Телефон</th>
+      <th>Комментарий</th>
       <th>Адрес доставки</th>
       <th>Ссылка на админку</th>
     </tr>
@@ -29,6 +30,7 @@
         <td>{{ item.total_price }} руб.</td>
         <td>{{ item.firstname }} {{ item.lastname }}</td>
         <td>{{ item.phonenumber }}</td>
+        <td>{{ item.comment }}</td>
         <td>{{ item.address }}</td>
         <td>
           <a href="{% url 'admin:foodcartapp_order_change' item.id%}?next={{ request.get_full_path|urlencode}}">Редактировать</a>
