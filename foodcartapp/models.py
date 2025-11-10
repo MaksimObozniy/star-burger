@@ -134,11 +134,22 @@ class OrderQuertSet(models.QuerySet):
 
 
 class Order(models.Model):
+    class Status(models.TextChoices):
+        UNPROCESSED = 'unprocessed', 'Необработанный'
+        IN_PROCESSED = 'in_progress', 'Готовится'
+        DELIVERED = 'delivered', 'Доставлен'
+    
     firstname = models.CharField('Имя', max_length=50)
     lastname = models.CharField('Фамилия', max_length=50)
     phonenumber = PhoneNumberField('Телефон', region='RU', db_index=True)
     address = models.CharField('Адрес', max_length=200)
     created_at = models.DateTimeField('Создан', auto_now_add=True)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.UNPROCESSED,
+        verbose_name='Статус'
+    )
 
     objects = OrderQuertSet.as_manager()
     class Meta:
