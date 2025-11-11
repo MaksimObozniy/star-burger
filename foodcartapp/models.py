@@ -143,15 +143,19 @@ class Order(models.Model):
     lastname = models.CharField('Фамилия', max_length=50)
     phonenumber = PhoneNumberField('Телефон', region='RU', db_index=True)
     address = models.CharField('Адрес', max_length=200)
-    created_at = models.DateTimeField('Создан', auto_now_add=True)
+    
+    created_at = models.DateTimeField('Создан', auto_now_add=True, db_index=True)
     called_at = models.DateTimeField('Дата звонка клиенту',null=True, blank=True )
     delivered_at = models.DateTimeField('Дата доставки',null=True, blank=True )
+    
     comment = models.TextField(blank=True, verbose_name='Комментарий')
+    
     status = models.CharField(
         max_length=20,
         choices=Status.choices,
         default=Status.UNPROCESSED,
-        verbose_name='Статус'
+        verbose_name='Статус',
+        db_index=True
     )
 
     objects = OrderQuertSet.as_manager()
