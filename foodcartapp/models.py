@@ -144,6 +144,8 @@ class Order(models.Model):
     phonenumber = PhoneNumberField('Телефон', region='RU', db_index=True)
     address = models.CharField('Адрес', max_length=200)
     created_at = models.DateTimeField('Создан', auto_now_add=True)
+    called_at = models.DateTimeField('Дата звонка клиенту',null=True, blank=True )
+    delivered_at = models.DateTimeField('Дата доставки',null=True, blank=True )
     comment = models.TextField(blank=True, verbose_name='Комментарий')
     status = models.CharField(
         max_length=20,
