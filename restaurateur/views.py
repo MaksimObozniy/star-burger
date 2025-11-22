@@ -92,7 +92,32 @@ def view_restaurants(request):
 @user_passes_test(is_manager, login_url='restaurateur:login')
 def view_orders(request):
 
-    orders = Order.objects.exclude(
-        status=Order.Status.DELIVERED
-        ).order_by("-id")
-    return render(request,'order_items.html', {'order_items': orders})
+    orders = (
+        Order.objects
+        .exclude(status=Order.Status.DELIVERED)
+        .prefetch_related('items__product')
+        .order_by('-id')
+    )
+
+    order_items = []
+
+    for order in orders:
+        product_ids = order.items.values_list('product_id', flat=True)
+        
+        avalible_restaurants = (
+            Restaurant.objects
+            .filter(menu_items__product_id__in=product_ids)
+            .distinct()
+            .order_by('name')
+        )
+
+        order_items.append({
+            'order':order,
+            'restaurants': avalible_restaurants
+        })
+
+        return render(
+            request,
+            'order_items.html',
+            {'order_items': order_items}
+        )
