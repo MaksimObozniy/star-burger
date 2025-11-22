@@ -138,12 +138,23 @@ class Order(models.Model):
         UNPROCESSED = 'unprocessed', 'Необработанный'
         IN_PROCESSED = 'in_progress', 'Готовится'
         DELIVERED = 'delivered', 'Доставлен'
-    
+
+    class PaymentMethod(models.TextChoices):
+        CASH = 'cash', 'Наличные'
+        ELECTRONIC = 'electronic', 'Электронно'
+
     firstname = models.CharField('Имя', max_length=50)
     lastname = models.CharField('Фамилия', max_length=50)
     phonenumber = PhoneNumberField('Телефон', region='RU', db_index=True)
     address = models.CharField('Адрес', max_length=200)
-    
+
+    payment_method = models.CharField(
+        max_length=20,
+        choices=PaymentMethod.choices,
+        default=PaymentMethod.CASH,
+        verbose_name='Способ оплаты'
+    )
+
     created_at = models.DateTimeField('Создан', auto_now_add=True, db_index=True)
     called_at = models.DateTimeField('Дата звонка клиенту',null=True, blank=True )
     delivered_at = models.DateTimeField('Дата доставки',null=True, blank=True )
