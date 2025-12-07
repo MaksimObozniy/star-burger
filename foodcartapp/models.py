@@ -3,6 +3,8 @@ from django.db.models import F, Sum, DecimalField, ExpressionWrapper
 from django.core.validators import MinValueValidator
 from phonenumber_field.modelfields import PhoneNumberField
 
+from .services import fetch_coordinates
+
 class Restaurant(models.Model):
     name = models.CharField(
         'название',
@@ -13,11 +15,30 @@ class Restaurant(models.Model):
         max_length=100,
         blank=True,
     )
+    latitude = models.FloatField(
+        'широта',
+        null=True,
+        blank=True
+    )
+    longitude = models.FloatField(
+        'долгота',
+        null=True,
+        blank=True
+    )
     contact_phone = models.CharField(
         'контактный телефон',
         max_length=50,
         blank=True,
     )
+
+    def save(self, *args, **kwargs):
+        if (self.latitude is None or self.longitude is None) and self.address:
+            lat, lon = fetch_coordinates(self.address)
+            if lat and lon:
+                self.latitude = lat
+                self.longitude = lon
+        
+        super().save(*args, **kwargs)
 
     class Meta:
         verbose_name = 'ресторан'

@@ -81,7 +81,7 @@ class OrderCreateSerializer(serializers.Serializer):
 
         items = validated_data.pop('products')
 
-        with transaction.atomoc():
+        with transaction.atomic():
             order = Order.objects.create(**validated_data)
 
             for item in items:

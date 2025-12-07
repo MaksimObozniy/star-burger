@@ -4,6 +4,7 @@ from django.templatetags.static import static
 from django.utils.html import format_html
 from django.shortcuts import redirect
 from django.utils.http import url_has_allowed_host_and_scheme
+from .services import get_sorted_restaurants
 
 from .models import Product, ProductCategory, ProductCategory, Restaurant, RestaurantMenuItem, Order, OrderItem
 
@@ -118,13 +119,22 @@ class OrderAdmin(admin.ModelAdmin):
         'firstname', 'lastname',
         'phonenumber', 'address', 'payment_method',
         'comment', 'created_at', 'called_at',
-        'delivered_at'
-        )
+        'nearest_restaurant', 'delivered_at'
+    )
     list_editable = ['status', 'payment_method']
     search_fields = ('firstname', 'lastname', 'phonenumber', 'address')
     list_filter   = ('created_at',)
     readonly_fields = ('created_at',)
     inlines = [OrderItemInline]
+
+
+    def nearest_restaurant(self, obj):
+        sorted_restaurants = get_sorted_restaurants(obj.address)
+        if not sorted_restaurants:
+            return "Нет данных"
+        rest, dist = sorted_restaurants[0]
+        return f"{rest.name} — {dist} км"
+
 
     def save_formset(self, request, form, formset, change):
         instances = formset.save(commit=False)
