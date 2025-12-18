@@ -6,17 +6,19 @@ geolocator = Nominatim(user_agent="starburger")
 geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1)
 
 def get_or_create_coordinates(address_text):
-    address_obj, created = Place.objects.get_or_create(query=address_text)
+    place, _ = Place.objects.get_or_create(address=address_text)
 
-    if address_obj.latitude and address_obj.longitude:
-        return (address_obj.latitude, address_obj.longitude)
+    if place.latitude and place.longitude:
+        return (place.latitude, place.longitude)
 
     location = geocode(address_text)
-    if location:
-        address_obj.latitude = location.latitude
-        address_obj.longitude = location.longitude
-        address_obj.save()
+    if not location:
+        return None
+    
 
-        return (location.latitude, location.longitude)
+    place.latitude = location.latitude
+    place.longitude = location.longitude
+    place.save()
 
-    return None
+    return (location.latitude, location.longitude)
+

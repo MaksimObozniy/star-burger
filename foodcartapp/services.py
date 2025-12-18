@@ -11,6 +11,7 @@ geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1)
 def get_distance_km(point1, point2):
     if not point1 or not point2:
         return None
+    
     return round(distance(point1, point2).km, 2)
 
 
@@ -19,7 +20,7 @@ def get_sorted_restaurants(order_address):
 
     order_coords = get_or_create_coordinates(order_address)
     if not order_coords:
-        return []
+        return None
 
     results = []
 

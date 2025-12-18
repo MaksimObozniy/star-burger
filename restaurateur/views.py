@@ -4,6 +4,9 @@ from django.views import View
 from django.urls import reverse_lazy
 from django.contrib.auth.decorators import user_passes_test
 
+from geocoder.services import get_or_create_coordinates
+from foodcartapp.services import get_distance_km
+
 from django.contrib.auth import authenticate, login
 from django.contrib.auth import views as auth_views
 
@@ -91,7 +94,6 @@ def view_restaurants(request):
 
 @user_passes_test(is_manager, login_url='restaurateur:login')
 def view_orders(request):
-
     orders = (
         Order.objects
         .exclude(status=Order.Status.DELIVERED)
@@ -103,21 +105,43 @@ def view_orders(request):
 
     for order in orders:
         product_ids = order.items.values_list('product_id', flat=True)
-        
-        avalible_restaurants = (
+
+        available_restaurants = (
             Restaurant.objects
             .filter(menu_items__product_id__in=product_ids)
             .distinct()
             .order_by('name')
         )
 
+        order_coords = get_or_create_coordinates(order.address)
+
+        if not order_coords:
+            restaurants_with_distance = []
+            address_not_found = True
+        else:
+            address_not_found = False
+            restaurants_with_distance = []
+
+            for restaurant in available_restaurants:
+                if restaurant.latitude is None or restaurant.longitude is None:
+                    continue
+
+                dist_km = get_distance_km(order_coords, (restaurant.latitude, restaurant.longitude))
+                restaurants_with_distance.append({
+                    'restaurant': restaurant,
+                    'distance_km': dist_km,
+                })
+
+            restaurants_with_distance.sort(key=lambda x: x['distance_km'] if x['distance_km'] is not None else 10**9)
+
         order_items.append({
-            'order':order,
-            'restaurants': avalible_restaurants
+            'order': order,
+            'restaurants': restaurants_with_distance,
+            'address_not_found': address_not_found,
         })
 
-        return render(
-            request,
-            'order_items.html',
-            {'order_items': order_items}
-        )
+    return render(
+        request,
+        'order_items.html',
+        {'order_items': order_items}
+    )
