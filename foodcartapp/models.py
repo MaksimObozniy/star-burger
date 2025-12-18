@@ -161,8 +161,6 @@ class Order(models.Model):
 
     payment_method = models.CharField(
         max_length=20,
-        choices=PaymentMethod.choices,
-        default=PaymentMethod.CASH,
         verbose_name='Способ оплаты'
     )
 
