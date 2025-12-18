@@ -2,6 +2,7 @@ from django.db import models
 from django.db.models import F, Sum, DecimalField, ExpressionWrapper
 from django.core.validators import MinValueValidator
 from phonenumber_field.modelfields import PhoneNumberField
+from collections import defaultdict
 
 
 class Restaurant(models.Model):
@@ -104,6 +105,19 @@ class Product(models.Model):
     def __str__(self):
         return self.name
 
+class RestaurantMenuItemQuerySet(models.QuerySet):
+    def available_menu(self):
+        return self.filter(availability=True).select_related('restaurant', 'product')
+
+    def restaurants_with_products(self):
+        
+        restaurants = defaultdict(set)
+
+        for item in self.available_menu():
+            restaurants[item.restaurant].add(item.product)
+
+        return restaurants
+
 
 class RestaurantMenuItem(models.Model):
     restaurant = models.ForeignKey(
@@ -124,6 +138,7 @@ class RestaurantMenuItem(models.Model):
         db_index=True
     )
 
+    objects = RestaurantMenuItemQuerySet()
     class Meta:
         verbose_name = 'пункт меню ресторана'
         verbose_name_plural = 'пункты меню ресторана'
@@ -133,6 +148,7 @@ class RestaurantMenuItem(models.Model):
 
     def __str__(self):
         return f"{self.restaurant.name} - {self.product.name}"
+
 
 
 class OrderQuertSet(models.QuerySet):

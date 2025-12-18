@@ -2,15 +2,12 @@ from django import forms
 from django.shortcuts import redirect, render
 from django.views import View
 from django.urls import reverse_lazy
-from django.contrib.auth.decorators import user_passes_test
-
-from geocoder.services import get_or_create_coordinates
-from foodcartapp.services import get_distance_km
-
 from django.contrib.auth import authenticate, login
 from django.contrib.auth import views as auth_views
+from django.contrib.auth.decorators import user_passes_test
 
-from foodcartapp.models import Product, Restaurant, Order
+from collections import defaultdict
+from foodcartapp.models import Product, Restaurant, RestaurantMenuItem, Order
 
 
 class Login(forms.Form):
@@ -94,74 +91,56 @@ def view_restaurants(request):
 
 @user_passes_test(is_manager, login_url='restaurateur:login')
 def view_orders(request):
+    # 1) Загружаем заказы одним набором запросов
     orders = (
         Order.objects
         .exclude(status=Order.Status.DELIVERED)
-        .select_related('restaurant')
-        .prefetch_related('items__product')
+        .select_related('restaurant')          # выбранный ресторан (FK)
+        .prefetch_related('items__product')    # позиции заказа + продукты
         .order_by('-id')
     )
 
+    # 2) Один раз получаем доступное меню всех ресторанов (availability=True)
+    # и строим словарь: {restaurant: set(products)}
+    restaurant_products = defaultdict(set)
+
+    menu_items = (
+        RestaurantMenuItem.objects
+        .filter(availability=True)
+        .select_related('restaurant', 'product')
+    )
+
+    for item in menu_items:
+        restaurant_products[item.restaurant].add(item.product)
+
+    # 3) Собираем данные для шаблона
     order_items = []
 
     for order in orders:
-
+        # Если ресторан уже выбран — показываем только его (не пересчитываем доступные)
         if order.restaurant:
             order_items.append({
                 'order': order,
-                'restaurants': [{
-                    'restaurant': order.restaurant,
-                    'distance_km': None,
-                }],
-                'address_not_found': False,
+                'restaurants': [order.restaurant],
             })
             continue
 
-        product_ids = order.items.values_list('product_id', flat=True)
+        # Продукты заказа как set объектов Product (без дополнительных запросов,
+        # потому что items__product уже prefetched)
+        order_products = {item.product for item in order.items.all()}
 
-        available_restaurants = (
-            Restaurant.objects
-            .filter(menu_items__product_id__in=product_ids)
-            .distinct()
-            .order_by('name')
-        )
+        available_restaurants = []
+        for restaurant, products in restaurant_products.items():
+            # ресторан подходит, если он может приготовить ВСЕ продукты из заказа
+            if order_products.issubset(products):
+                available_restaurants.append(restaurant)
 
-        order_coords = get_or_create_coordinates(order.address)
-
-        if not order_coords:
-
-            order_items.append({
-                'order': order,
-                'restaurants': [],
-                'address_not_found': True,
-            })
-            continue
-
-
-        restaurants_with_distance = []
-        for restaurant in available_restaurants:
-            if restaurant.latitude is None or restaurant.longitude is None:
-                continue
-
-            dist_km = get_distance_km(
-                order_coords,
-                (restaurant.latitude, restaurant.longitude)
-            )
-
-            restaurants_with_distance.append({
-                'restaurant': restaurant,
-                'distance_km': dist_km,
-            })
-
-
-        restaurants_with_distance.sort(
-            key=lambda x: x['distance_km'] if x['distance_km'] is not None else 10**9
-        )
+        # Важно: порядок можно сделать стабильным (как раньше order_by('name'))
+        available_restaurants.sort(key=lambda r: r.name)
 
         order_items.append({
             'order': order,
-            'restaurants': restaurants_with_distance,
-            'address_not_found': False,
+            'restaurants': available_restaurants,
         })
 
     return render(
