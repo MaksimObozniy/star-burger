@@ -97,6 +97,7 @@ def view_orders(request):
     orders = (
         Order.objects
         .exclude(status=Order.Status.DELIVERED)
+        .select_related('restaurant')
         .prefetch_related('items__product')
         .order_by('-id')
     )
@@ -104,6 +105,18 @@ def view_orders(request):
     order_items = []
 
     for order in orders:
+
+        if order.restaurant:
+            order_items.append({
+                'order': order,
+                'restaurants': [{
+                    'restaurant': order.restaurant,
+                    'distance_km': None,
+                }],
+                'address_not_found': False,
+            })
+            continue
+
         product_ids = order.items.values_list('product_id', flat=True)
 
         available_restaurants = (
