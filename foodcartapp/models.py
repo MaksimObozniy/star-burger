@@ -3,7 +3,6 @@ from django.db.models import F, Sum, DecimalField, ExpressionWrapper
 from django.core.validators import MinValueValidator
 from phonenumber_field.modelfields import PhoneNumberField
 
-from geocoder.services import get_or_create_coordinates
 
 class Restaurant(models.Model):
     name = models.CharField(
@@ -30,14 +29,6 @@ class Restaurant(models.Model):
         max_length=50,
         blank=True,
     )
-
-    def save(self, *args, **kwargs):
-        if (self.latitude is None or self.longitude is None) and self.address:
-            coords = get_or_create_coordinates(self.address)
-            if coords:
-                self.latitude, self.longitude = coords
-
-        super().save(*args, **kwargs)
 
     class Meta:
         verbose_name = 'ресторан'
