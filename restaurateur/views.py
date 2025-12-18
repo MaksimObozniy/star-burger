@@ -5,6 +5,7 @@ from django.urls import reverse_lazy
 from django.contrib.auth import authenticate, login
 from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import user_passes_test
+from foodcartapp.services import get_restaurants_with_distance
 
 from collections import defaultdict
 from foodcartapp.models import Product, Restaurant, RestaurantMenuItem, Order
@@ -114,26 +115,37 @@ def view_orders(request):
     order_items = []
 
     for order in orders:
+        total_cost = sum(item.quantity * item.product.price for item in order.items.all())
+
+        restaurants = []
+        address_not_found = False
+
         if order.restaurant:
-            order_items.append({
-                'order': order,
-                'restaurants': [order.restaurant],
-            })
-            continue
+            restaurants = [order.restaurant]
 
-        order_products = {item.product for item in order.items.all()}
+        else:
+            order_products = {item.product for item in order.items.all()}
 
-        available_restaurants = []
-        for restaurant, products in restaurant_products.items():
+            restaurants = []
+            for restaurant, products in restaurant_products.items():
+                if order_products.issubset(products):
+                    restaurants.append(restaurant)
 
-            if order_products.issubset(products):
-                available_restaurants.append(restaurant)
+            restaurants.sort(key=lambda r: r.name)
 
-        available_restaurants.sort(key=lambda r: r.name)
+        restaurants_with_distance = get_restaurants_with_distance(order.address, restaurants)
+
+        if restaurants_with_distance is None:
+            address_not_found = True
+            restaurants_with_distance = []
+        else:
+            address_not_found = False
 
         order_items.append({
             'order': order,
-            'restaurants': available_restaurants,
+            'restaurants': restaurants_with_distance,
+            'address_not_found': address_not_found,
+            'total_cost': total_cost,
         })
 
     return render(

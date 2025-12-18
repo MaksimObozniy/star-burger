@@ -30,3 +30,23 @@ def get_sorted_restaurants(order_address):
         results.append((restaurant, round(dist, 2)))
 
     return sorted(results, key=lambda r: r[1])
+
+
+def get_restaurants_with_distance(order_address, restaurants):
+    order_coords = get_or_create_coordinates(order_address)
+    if not order_coords:
+        return None
+
+    result = []
+    for restaurant in restaurants:
+        if restaurant.latitude is None or restaurant.longitude is None:
+            continue
+
+        dist_km = get_distance_km(order_coords, (restaurant.latitude, restaurant.longitude))
+        result.append({
+            'restaurant': restaurant,
+            'distance_km': dist_km,
+        })
+
+    result.sort(key=lambda x: x['distance_km'] if x['distance_km'] is not None else 10**9)
+    return result

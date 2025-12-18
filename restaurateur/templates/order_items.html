@@ -29,29 +29,24 @@
         <tr>
           <td>{{ order.id }}</td>
           <td>{{ order.get_status_display }}</td>
-          <td>{{ order.total_price }} руб.</td>
+          <td>{{ item.total_cost }} руб.</td>
           <td>{{ order.firstname }} {{ order.lastname }}</td>
           <td>{{ order.phonenumber }}</td>
           <td>{{ order.comment }}</td>
           <td>{{ order.address }}</td>
 
           <td>
-            {# 1) Ресторан уже выбран в админке #}
-            {% if order.restaurant %}
-              Готовит {{ order.restaurant.name }}
-
-            {# 2) Ресторан не выбран, но есть подходящие #}
+            {% if item.address_not_found %}
+              Адрес не найден
             {% elif restaurants %}
               Может быть приготовлен ресторанами:
               <ul class="mb-0">
                 {% for r in restaurants %}
-                  <li>{{ r.name }}</li>
+                  <li>{{ r.restaurant.name }} — {{ r.distance_km }} км</li>
                 {% endfor %}
               </ul>
-
-            {# 3) Нет ни выбранного ресторана, ни подходящих #}
             {% else %}
-              Ошибка определения координат
+              Нет подходящих ресторанов
             {% endif %}
           </td>
 
