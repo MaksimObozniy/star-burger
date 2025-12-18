@@ -91,17 +91,15 @@ def view_restaurants(request):
 
 @user_passes_test(is_manager, login_url='restaurateur:login')
 def view_orders(request):
-    # 1) Загружаем заказы одним набором запросов
+
     orders = (
         Order.objects
         .exclude(status=Order.Status.DELIVERED)
-        .select_related('restaurant')          # выбранный ресторан (FK)
-        .prefetch_related('items__product')    # позиции заказа + продукты
+        .select_related('restaurant')
+        .prefetch_related('items__product')
         .order_by('-id')
     )
 
-    # 2) Один раз получаем доступное меню всех ресторанов (availability=True)
-    # и строим словарь: {restaurant: set(products)}
     restaurant_products = defaultdict(set)
 
     menu_items = (
@@ -113,11 +111,9 @@ def view_orders(request):
     for item in menu_items:
         restaurant_products[item.restaurant].add(item.product)
 
-    # 3) Собираем данные для шаблона
     order_items = []
 
     for order in orders:
-        # Если ресторан уже выбран — показываем только его (не пересчитываем доступные)
         if order.restaurant:
             order_items.append({
                 'order': order,
@@ -125,17 +121,14 @@ def view_orders(request):
             })
             continue
 
-        # Продукты заказа как set объектов Product (без дополнительных запросов,
-        # потому что items__product уже prefetched)
         order_products = {item.product for item in order.items.all()}
 
         available_restaurants = []
         for restaurant, products in restaurant_products.items():
-            # ресторан подходит, если он может приготовить ВСЕ продукты из заказа
+
             if order_products.issubset(products):
                 available_restaurants.append(restaurant)
 
-        # Важно: порядок можно сделать стабильным (как раньше order_by('name'))
         available_restaurants.sort(key=lambda r: r.name)
 
         order_items.append({
