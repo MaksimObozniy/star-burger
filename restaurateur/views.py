@@ -129,28 +129,39 @@ def view_orders(request):
         order_coords = get_or_create_coordinates(order.address)
 
         if not order_coords:
-            restaurants_with_distance = []
-            address_not_found = True
-        else:
-            address_not_found = False
-            restaurants_with_distance = []
 
-            for restaurant in available_restaurants:
-                if restaurant.latitude is None or restaurant.longitude is None:
-                    continue
+            order_items.append({
+                'order': order,
+                'restaurants': [],
+                'address_not_found': True,
+            })
+            continue
 
-                dist_km = get_distance_km(order_coords, (restaurant.latitude, restaurant.longitude))
-                restaurants_with_distance.append({
-                    'restaurant': restaurant,
-                    'distance_km': dist_km,
-                })
 
-            restaurants_with_distance.sort(key=lambda x: x['distance_km'] if x['distance_km'] is not None else 10**9)
+        restaurants_with_distance = []
+        for restaurant in available_restaurants:
+            if restaurant.latitude is None or restaurant.longitude is None:
+                continue
+
+            dist_km = get_distance_km(
+                order_coords,
+                (restaurant.latitude, restaurant.longitude)
+            )
+
+            restaurants_with_distance.append({
+                'restaurant': restaurant,
+                'distance_km': dist_km,
+            })
+
+
+        restaurants_with_distance.sort(
+            key=lambda x: x['distance_km'] if x['distance_km'] is not None else 10**9
+        )
 
         order_items.append({
             'order': order,
             'restaurants': restaurants_with_distance,
-            'address_not_found': address_not_found,
+            'address_not_found': False,
         })
 
     return render(
