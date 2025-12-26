@@ -7,4 +7,4 @@ class Place(models.Model):
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Последнее обновление")
     
     def __str__(self):
-        return self.query
+        return self.address
