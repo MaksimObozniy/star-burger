@@ -1,8 +1,10 @@
-from rest_framework import serializers
 import phonenumbers
 
+from geocoder.services import get_or_create_coordinates
+from rest_framework import serializers
 from .models import Order, Product, OrderItem
 from django.db import transaction
+
 
 class OrderItemsListSerializer(serializers.ListSerializer):
     def to_internal_value(self, data):
@@ -84,6 +86,8 @@ class OrderCreateSerializer(serializers.Serializer):
         with transaction.atomic():
             order = Order.objects.create(**validated_data)
 
+            if order.address:
+                get_or_create_coordinates(order.address)
             for item in items:
                 product = item['product']
                 OrderItem.objects.create(
