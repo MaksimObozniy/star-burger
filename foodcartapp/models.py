@@ -144,11 +144,15 @@ class RestaurantMenuItem(models.Model):
 
 class OrderQuerySet(models.QuerySet):
     def with_total_price(self):
-        line_total = ExpressionWrapper(
-            F('items__quantity') * F('items__product__price'),
-            output_field=DecimalField(max_digits=10, decimal_places=2),
+        return self.annotate(
+            total_price=Sum(
+                ExpressionWrapper(
+                    F('items__quantity') * F('items__product__price'),
+                    output_field=DecimalField(max_digits=10, decimal_places=2),
+                )
+            )
         )
-        return self.annotate(total_price=Coalesce(Sum(line_total), Value(0)))
+
 
     def with_available_restaurants(self):
         menu_items = (

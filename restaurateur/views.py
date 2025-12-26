@@ -5,10 +5,10 @@ from django.urls import reverse_lazy
 from django.contrib.auth import authenticate, login
 from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import user_passes_test
-from foodcartapp.services import get_restaurants_with_distance
+from geocoder.models import Place
+from geopy.distance import distance
 
-from collections import defaultdict
-from foodcartapp.models import Product, Restaurant, RestaurantMenuItem, Order
+from foodcartapp.models import Product, Restaurant, Order
 
 
 class Login(forms.Form):
@@ -98,28 +98,72 @@ def view_orders(request):
         .select_related('restaurant')
         .prefetch_related('items__product')
         .with_total_price()
-        .with_available_restaurants()
         .order_by('-id')
+        .with_available_restaurants()
     )
 
-    order_items = []
-    for order in orders:
-        restaurants_with_distance = get_restaurants_with_distance(
-            order.address,
-            getattr(order, 'available_restaurants', [])
-        )
+    order_addresses = {o.address for o in orders if o.address}
 
-        if restaurants_with_distance is None:
-            address_not_found = True
-            restaurants_with_distance = []
-        else:
-            address_not_found = False
+    restaurant_addresses = set()
+    for o in orders:
+        for r in getattr(o, 'available_restaurants', []):
+            if r.address:
+                restaurant_addresses.add(r.address)
+
+    all_addresses = order_addresses | restaurant_addresses
+
+    places_by_address = {
+        p.address: p
+        for p in Place.objects.filter(address__in=all_addresses)
+    }
+
+    order_items = []
+
+    for order in orders:
+        total_cost = order.total_price
+
+        if order.restaurant:
+            order_items.append({
+                'order': order,
+                'restaurants': [{'restaurant': order.restaurant, 'distance_km': None}],
+                'address_not_found': False,
+                'total_cost': total_cost,
+            })
+            continue
+
+        order_place = places_by_address.get(order.address)
+        if not order_place or order_place.latitude is None or order_place.longitude is None:
+            order_items.append({
+                'order': order,
+                'restaurants': [],
+                'address_not_found': True,
+                'total_cost': total_cost,
+            })
+            continue
+
+        order_coords = (order_place.latitude, order_place.longitude)
+
+        restaurants_with_distance = []
+        for restaurant in getattr(order, 'available_restaurants', []):
+            restaurant_place = places_by_address.get(restaurant.address)
+            if not restaurant_place or restaurant_place.latitude is None or restaurant_place.longitude is None:
+                continue
+
+            rest_coords = (restaurant_place.latitude, restaurant_place.longitude)
+            dist_km = round(distance(order_coords, rest_coords).km, 2)
+
+            restaurants_with_distance.append({
+                'restaurant': restaurant,
+                'distance_km': dist_km,
+            })
+
+        restaurants_with_distance.sort(key=lambda x: x['distance_km'])
 
         order_items.append({
             'order': order,
             'restaurants': restaurants_with_distance,
-            'address_not_found': address_not_found,
-            'total_cost': order.total_price,
+            'address_not_found': False,
+            'total_cost': total_cost,
         })
 
     return render(request, 'order_items.html', {'order_items': order_items})
