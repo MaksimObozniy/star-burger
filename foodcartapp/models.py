@@ -1,8 +1,10 @@
 from django.db import models
-from django.db.models import F, Sum, DecimalField, ExpressionWrapper
+from django.db.models import F, Sum, DecimalField, ExpressionWrapper, Value
 from django.core.validators import MinValueValidator
+from django.db.models.functions import Coalesce
 from phonenumber_field.modelfields import PhoneNumberField
 from collections import defaultdict
+
 
 
 class Restaurant(models.Model):
@@ -140,15 +142,15 @@ class RestaurantMenuItem(models.Model):
         return f"{self.restaurant.name} - {self.product.name}"
 
 
-
-class OrderQuertSet(models.QuerySet):
+class OrderQuerySet(models.QuerySet):
     def with_total_price(self):
         line_total = ExpressionWrapper(
-            F('items__price') * F('items__quantity'),
+            F('items__quantity') * F('items__product__price'),
             output_field=DecimalField(max_digits=10, decimal_places=2),
         )
-        return self.annotate(total_price=Sum(line_total))
-
+        return self.annotate(
+            total_price=Coalesce(Sum(line_total), Value(0))
+        )
 
 class Order(models.Model):
     class Status(models.TextChoices):
@@ -193,7 +195,7 @@ class Order(models.Model):
         related_name='orders'
     )
 
-    objects = OrderQuertSet.as_manager()
+    objects = OrderQuerySet.as_manager()
     class Meta:
         verbose_name = 'Заказ'
         verbose_name_plural = 'Заказы'

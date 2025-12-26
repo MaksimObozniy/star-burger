@@ -96,6 +96,7 @@ def view_orders(request):
     orders = (
         Order.objects
         .exclude(status=Order.Status.DELIVERED)
+        .with_total_price()
         .select_related('restaurant')
         .prefetch_related('items__product')
         .order_by('-id')
@@ -115,8 +116,7 @@ def view_orders(request):
     order_items = []
 
     for order in orders:
-        total_cost = sum(item.quantity * item.product.price for item in order.items.all())
-
+        total_cost = order.total_price
         restaurants = []
         address_not_found = False
 
