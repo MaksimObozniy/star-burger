@@ -8,13 +8,6 @@ geolocator = Nominatim(user_agent="starburger")
 geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1)
 
 
-def get_distance_km(point1, point2):
-    if not point1 or not point2:
-        return None
-    
-    return round(distance(point1, point2).km, 2)
-
-
 def get_sorted_restaurants(order_address):
     from .models import Restaurant
 
@@ -32,6 +25,12 @@ def get_sorted_restaurants(order_address):
     return sorted(results, key=lambda r: r[1])
 
 
+def get_distance_km(point1, point2):
+    if not point1 or not point2:
+        return None
+    return round(distance(point1, point2).km, 2)
+
+
 def get_restaurants_with_distance(order_address, restaurants):
     order_coords = get_or_create_coordinates(order_address)
     if not order_coords:
@@ -39,14 +38,12 @@ def get_restaurants_with_distance(order_address, restaurants):
 
     result = []
     for restaurant in restaurants:
-        if restaurant.latitude is None or restaurant.longitude is None:
+        rest_coords = get_or_create_coordinates(restaurant.address)
+        if not rest_coords:
             continue
 
-        dist_km = get_distance_km(order_coords, (restaurant.latitude, restaurant.longitude))
-        result.append({
-            'restaurant': restaurant,
-            'distance_km': dist_km,
-        })
+        dist_km = get_distance_km(order_coords, rest_coords)
+        result.append({'restaurant': restaurant, 'distance_km': dist_km})
 
     result.sort(key=lambda x: x['distance_km'] if x['distance_km'] is not None else 10**9)
     return result

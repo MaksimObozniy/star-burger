@@ -15,16 +15,6 @@ class Restaurant(models.Model):
         max_length=100,
         blank=True,
     )
-    latitude = models.FloatField(
-        'широта',
-        null=True,
-        blank=True
-    )
-    longitude = models.FloatField(
-        'долгота',
-        null=True,
-        blank=True
-    )
     contact_phone = models.CharField(
         'контактный телефон',
         max_length=50,
