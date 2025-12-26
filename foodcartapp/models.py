@@ -148,9 +148,35 @@ class OrderQuerySet(models.QuerySet):
             F('items__quantity') * F('items__product__price'),
             output_field=DecimalField(max_digits=10, decimal_places=2),
         )
-        return self.annotate(
-            total_price=Coalesce(Sum(line_total), Value(0))
+        return self.annotate(total_price=Coalesce(Sum(line_total), Value(0)))
+
+    def with_available_restaurants(self):
+        menu_items = (
+            RestaurantMenuItem.objects
+            .filter(availability=True)
+            .select_related('restaurant', 'product')
         )
+
+        restaurant_products = defaultdict(set)
+        for item in menu_items:
+            restaurant_products[item.restaurant].add(item.product)
+
+        for order in self:
+            if order.restaurant:
+                order.available_restaurants = [order.restaurant]
+                continue
+
+            order_products = {item.product for item in order.items.all()}
+
+            available = [
+                restaurant
+                for restaurant, products in restaurant_products.items()
+                if order_products.issubset(products)
+            ]
+            order.available_restaurants = sorted(available, key=lambda r: r.name)
+
+        return self
+
 
 class Order(models.Model):
     class Status(models.TextChoices):

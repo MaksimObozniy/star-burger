@@ -92,48 +92,22 @@ def view_restaurants(request):
 
 @user_passes_test(is_manager, login_url='restaurateur:login')
 def view_orders(request):
-
     orders = (
         Order.objects
         .exclude(status=Order.Status.DELIVERED)
-        .with_total_price()
         .select_related('restaurant')
         .prefetch_related('items__product')
+        .with_total_price()
+        .with_available_restaurants()
         .order_by('-id')
     )
 
-    restaurant_products = defaultdict(set)
-
-    menu_items = (
-        RestaurantMenuItem.objects
-        .filter(availability=True)
-        .select_related('restaurant', 'product')
-    )
-
-    for item in menu_items:
-        restaurant_products[item.restaurant].add(item.product)
-
     order_items = []
-
     for order in orders:
-        total_cost = order.total_price
-        restaurants = []
-        address_not_found = False
-
-        if order.restaurant:
-            restaurants = [order.restaurant]
-
-        else:
-            order_products = {item.product for item in order.items.all()}
-
-            restaurants = []
-            for restaurant, products in restaurant_products.items():
-                if order_products.issubset(products):
-                    restaurants.append(restaurant)
-
-            restaurants.sort(key=lambda r: r.name)
-
-        restaurants_with_distance = get_restaurants_with_distance(order.address, restaurants)
+        restaurants_with_distance = get_restaurants_with_distance(
+            order.address,
+            getattr(order, 'available_restaurants', [])
+        )
 
         if restaurants_with_distance is None:
             address_not_found = True
@@ -145,11 +119,7 @@ def view_orders(request):
             'order': order,
             'restaurants': restaurants_with_distance,
             'address_not_found': address_not_found,
-            'total_cost': total_cost,
+            'total_cost': order.total_price,
         })
 
-    return render(
-        request,
-        'order_items.html',
-        {'order_items': order_items}
-    )
+    return render(request, 'order_items.html', {'order_items': order_items})
