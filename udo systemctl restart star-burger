@@ -1,0 +1,7 @@
+[0;1;31m×[0m star-burger.service - Star Burger Django Server
+     Loaded: loaded (]8;;file://tg-bots-server/etc/systemd/system/star-burger.service/etc/systemd/system/star-burger.service]8;;; [0;1;32menabled[0m; preset: [0;1;32menabled[0m)
+     Active: [0;1;31mfailed[0m (Result: exit-code) since Sat 2026-01-31 00:20:07 UTC; 1s ago
+   Duration: 46ms
+    Process: 1350671 ExecStart=/home/deploy/djangoprojects/star-burger/venv/bin/python manage.py runserver 0.0.0.0:80 [0;1;31m(code=exited, status=2)[0m
+   Main PID: 1350671 (code=exited, status=2)
+        CPU: 35ms
