@@ -6,7 +6,6 @@ import CartModalComponent from './components/CartModalComponent';
 import BannerComponent from './components/BannerComponent';
 import Products from './components/Products';
 import QuickView from './components/QuickView';
-import FooterComponent from './components/FooterComponent';
 import CheckoutModal from './components/CheckoutModalComponent';
 import LoadingProducts from './components/loaders/LoadingProducts';
 import NoResults from "./components/NoResults";
@@ -338,7 +337,6 @@ class App extends Component {
         </div>
 
         <a href="#" id="contact_us"></a>
-        <FooterComponent/>
 
         <CheckoutModal
           checkoutModalActive={true}
