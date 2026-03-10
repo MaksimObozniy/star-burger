@@ -1,5 +1,7 @@
 import os
 
+import rollbar
+
 import dj_database_url
 
 from environs import Env
@@ -23,7 +25,7 @@ ROLLBAR = {
     'root': BASE_DIR,
 }
 
-import rollbar
+
 rollbar.init(**ROLLBAR)
 
 INSTALLED_APPS = [
