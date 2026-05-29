@@ -1,0 +1,17 @@
+.git
+.venv
+venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.DS_Store
+
+node_modules
+.parcel-cache
+dist
+
+.env
+db.sqlite3
+media
+staticfiles
