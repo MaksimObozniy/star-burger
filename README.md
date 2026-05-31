@@ -1,62 +1,170 @@
-# Как запустить локально через Docker Compose
+## Как запустить на сервере через Docker Compose
 
-Для локального запуска проекта нужен установленный Docker Desktop.
+Проект на сервере запускается через Docker Compose.
 
-## 1. Создайте файл .env
+Используются три сервиса:
 
-В корне проекта создайте файл .env:
+* `frontend` — собирает frontend через Parcel и завершает работу;
+* `backend` — запускает Django через Gunicorn;
+* `nginx` — раздаёт static/media-файлы и проксирует запросы в backend.
 
-touch .env
+### 1. Подготовьте сервер
 
-Добавьте в него переменные окружения:
+На сервере должен быть установлен Docker и Docker Compose plugin.
 
-DEBUG=True
+Проверьте установку:
+
+```bash
+docker --version
+docker compose version
+```
+
+### 2. Склонируйте проект
+
+```bash
+git clone https://github.com/MaksimOboznyi/star-burger.git
+cd star-burger
+```
+
+Если нужно использовать отдельную ветку:
+
+```bash
+git checkout имя_ветки
+```
+
+### 3. Создайте `.env`
+
+В корне проекта создайте файл `.env`:
+
+```bash
+nano .env
+```
+
+Пример содержимого:
+
+```env
+DEBUG=False
 SECRET_KEY=your-secret-key
-ROLLBAR_TOKEN=
-ROLLBAR_ENVIRONMENT=development
+ALLOWED_HOSTS=127.0.0.1,localhost,0.0.0.0,server_ip_or_domain
+
+ROLLBAR_TOKEN=your-rollbar-token
+ROLLBAR_ENVIRONMENT=production
+
 DATABASE_URL=sqlite:///db.sqlite3
-ALLOWED_HOSTS=127.0.0.1,localhost,0.0.0.0
+```
 
-Для локальной разработки ROLLBAR_TOKEN можно оставить пустым.
+`ROLLBAR_TOKEN` — это Project Access Token из Rollbar со scope `post_server_item`.
 
-## 2. Соберите и запустите контейнеры
-docker compose up --build
+### 4. Запустите проект
 
-После запуска сайт будет доступен по адресу:
+```bash
+docker compose up --build -d
+```
 
-http://127.0.0.1:8000
+После запуска проверьте контейнеры:
 
-Админка Django будет доступна по адресу:
+```bash
+docker compose ps -a
+```
 
-http://127.0.0.1:8000/admin/
-## 3. Примените миграции
+Ожидаемый результат:
 
-В отдельной вкладке терминала выполните:
+```text
+frontend   Exited (0)
+backend    Up
+nginx      Up
+```
 
+`frontend` завершается после успешной сборки frontend-файлов. Это нормальное поведение.
+
+### 5. Примените миграции
+
+```bash
 docker compose exec backend python manage.py migrate
-## 4. Создайте администратора
-docker compose exec backend python manage.py createsuperuser
+```
 
-## 5. Frontend
+### 6. Соберите static-файлы
 
-Frontend собирается в отдельном контейнере frontend с помощью Parcel.
+```bash
+docker compose exec backend python manage.py collectstatic --noinput
+```
 
-Готовые frontend-файлы попадают в каталог:
+Static-файлы собираются в каталог:
 
-bundles/
+```text
+staticfiles/
+```
 
-Django использует этот каталог для раздачи static-файлов.
+Nginx раздаёт их по адресу:
 
-## 6. Media-файлы
+```text
+/static/
+```
 
-Загруженные через админку изображения сохраняются в каталоге:
+### 7. Media-файлы
 
+Загруженные через админку файлы хранятся в каталоге:
+
+```text
 media/
+```
 
-Каталог media подключён в Docker Compose как volume, поэтому файлы не теряются при обычном перезапуске контейнеров.
+В `docker-compose.yml` каталог `media` подключён к backend и nginx как папка проекта, поэтому файлы не теряются при пересоздании контейнеров.
 
-Не используйте команду:
+### 8. Проверка сайта
 
-docker compose down -v
+Проверьте сайт локально на сервере:
 
-если хотите сохранить загруженные media-файлы, потому что флаг -v удаляет Docker volumes.
+```bash
+curl -I http://127.0.0.1:8010
+```
+
+Или откройте в браузере:
+
+```text
+http://server_ip_or_domain:8010
+```
+
+## Автоматический деплой
+
+Для обновления проекта на сервере используется скрипт:
+
+```bash
+./deploy_star_burger.sh
+```
+
+Скрипт выполняет следующие действия:
+
+1. Подтягивает свежий код из GitHub.
+2. Пересобирает и запускает Docker Compose контейнеры.
+3. Применяет миграции Django.
+4. Собирает static-файлы.
+5. Перезапускает nginx-контейнер.
+6. Отправляет событие о деплое в Rollbar, если указан `ROLLBAR_TOKEN`.
+
+Перед запуском убедитесь, что у скрипта есть права на выполнение:
+
+```bash
+chmod +x deploy_star_burger.sh
+```
+
+Запуск деплоя:
+
+```bash
+./deploy_star_burger.sh
+```
+
+После деплоя проверьте контейнеры:
+
+```bash
+docker compose ps -a
+```
+
+Ожидаемый результат:
+
+```text
+frontend   Exited (0)
+backend    Up
+nginx      Up
+```
+
