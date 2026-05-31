@@ -1,25 +1,15 @@
 services:
-  frontend:
-    image: node:17.6.0-bullseye-slim
-    working_dir: /app
-    command: sh -c "npm ci && ./node_modules/.bin/parcel build bundles-src/index.jsx --dist-dir bundles --public-url='/static/' --no-cache"
-    volumes:
-      - .:/app
-    restart: "no"
-
   backend:
     build:
       context: .
     command: gunicorn star_burger.wsgi:application --bind 0.0.0.0:8000
     restart: unless-stopped
     volumes:
-      - .:/app
+      - ./db.sqlite3:/app/db.sqlite3
       - ./media:/app/media
+      - ./staticfiles:/app/staticfiles
     env_file:
       - .env
-    depends_on:
-      frontend:
-        condition: service_completed_successfully
 
   nginx:
     image: nginx:1.25
@@ -32,3 +22,4 @@ services:
       - ./media:/var/www/media:ro
     depends_on:
       - backend
+
